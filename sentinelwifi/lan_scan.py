@@ -77,6 +77,19 @@ def _default_gateway() -> str:
                     return socket.inet_ntoa(bytes.fromhex(fields[2])[::-1])
     except OSError:
         pass
+    # Windows fallback: parse `ipconfig`
+    try:
+        import sys as _sys
+        if _sys.platform.startswith("win"):
+            out = subprocess.run(["ipconfig"], capture_output=True, text=True,
+                                 timeout=10)
+            for line in out.stdout.splitlines():
+                if "Default Gateway" in line and ":" in line:
+                    val = line.split(":", 1)[1].strip()
+                    if val:
+                        return val
+    except Exception:
+        pass
     return ""
 
 

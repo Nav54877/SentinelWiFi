@@ -13,60 +13,64 @@ no cloud calls, contains no telemetry, and stores everything locally in
 > the CFAA; in the EU, national computer-misuse laws). SentinelWiFi is
 > built for your home network: your router, your WiFi, your devices.
 
-## What it does
+![CI](https://github.com/Nav54877/SentinelWiFi/actions/workflows/ci.yml/badge.svg)
 
-1. **Network audit** — shows your SSID, BSSID, signal, channel, and
-   encryption (WPA3/WPA2/WEP/Open), with red warnings for WEP/Open; checks
-   gateway reachability and whether the router admin page answers on HTTP
-   (cleartext credentials) vs HTTPS.
-2. **AP environment scan** — a 30-second passive sniffing window (monitor
-   mode) enumerates all visible APs, detects possible evil twins (same
-   SSID, 2+ BSSIDs), and reports channel congestion including 2.4GHz
-   overlap math.
+## Features
+
+1. **Network audit** — SSID, BSSID, signal, channel, encryption
+   (WPA3/WPA2/WEP/Open) with red warnings for WEP/Open; checks whether the
+   router admin page answers on HTTP (cleartext credentials) vs HTTPS.
+2. **AP environment scan** — 30-second passive sniffing window (monitor
+   mode) enumerates all visible APs; **evil-twin detection** (same SSID,
+   2+ BSSIDs — suppress known dual-band BSSIDs via `trusted_bssids` in the
+   config); channel-congestion report with 2.4GHz overlap math; "new APs
+   since last run" from local history.
 3. **LAN device inventory** — ARP-scans your /24, resolves vendors from a
-   bundled OUI map, marks gateway/self/unknown devices, and remembers
-   devices across runs in `~/.sentinelwifi/known_devices.json` so **new
-   devices are highlighted — the "who's on my WiFi" feature**.
-4. **Report card** — an A–F grade computed from transparent rules (see
-   `scoring.py`), each finding with severity, plain-language explanation,
-   and the fix. `--json` gives machine-readable output; `watch` mode loops
-   the inventory every 60s and announces new devices.
+   bundled OUI map, marks gateway/self/**new** devices, persists across
+   runs in `~/.sentinelwifi/known_devices.json` — the "who's on my WiFi"
+   feature. `watch` mode sweeps every 60s and announces newcomers, with
+   optional desktop notifications.
+4. **Rogue-DHCP detection** — parses your own DHCP lease files; if the
+   server that handed you network settings isn't your gateway, that's a
+   critical finding.
+5. **Exposed-service scan** — threaded TCP connect-scan of 26 curated,
+   security-relevant ports (Telnet, TR-069, VNC, RDP, SMB…) on **your own
+   devices**, with banner grabbing. Answers "what could an attacker who
+   got on my WiFi touch first?"
+6. **Report card** — transparent A–F grading (see `scoring.py`), every
+   finding with severity, plain-language explanation, and the fix.
+   Output: rich console, `--json`, or self-contained `--html` (offline,
+   shareable).
+
+## Commands
+
+```bash
+sudo python sentinel.py scan       # your WiFi + surroundings (+ grade)
+python sentinel.py devices         # device inventory, newcomers flagged
+python sentinel.py devices --ports # …+ exposed-service scan of found devices
+python sentinel.py ports           # dedicated service scan of your subnet
+sudo python sentinel.py watch      # rogue-device alarm (60s loop, --notify, --interval N)
+python sentinel.py report          # everything, one report (+ --html out.html)
+python sentinel.py selftest        # environment checklist (what's missing/failing)
+python sentinel.py demo            # full report from synthetic data — no network needed
+python sentinel.py --version       # v2.0.0
+```
+
+Global flags work before or after the subcommand: `--json`, `--html FILE`,
+`--iface NAME`. Config lives in `~/.sentinelwifi/config.json`
+(`watch_interval`, `port_scan_timeout`, `notify`, `trusted_bssids`, …).
 
 ## Passive-only scope
 
 - No deauth, no packet injection, no handshake capture, no password
-  cracking, no WPS attacks, no association attempts. Verified with:
-  `grep -ri "deauth\|inject\|handshake\|crack" sentinelwifi/` → nothing.
-- All scanning is receive-only sniffing or standard client scans
-  (nmcli/iw) plus ARP on your own subnet.
-- If a feature needs monitor mode and your adapter/driver can't do it,
-  the tool **degrades to a managed-mode scan and tells you** — it never
-  crashes or silently skips.
-
-## Install & run
-
-```bash
-pip install -r requirements.txt
-sudo python sentinel.py scan      # sudo recommended for sniffing/ARP
-python sentinel.py devices
-sudo python sentinel.py watch     # rogue-device alarm
-python sentinel.py report
-python sentinel.py scan --json
-```
-
-## Platform notes (honest limitations)
-
-- **Linux (Ubuntu/Kali)**: full feature set. Monitor mode needs a
-  monitor-capable USB adapter (e.g., an Atheros/Realtek chipset with
-  in-kernel driver) and `iw` installed; the built-in adapter of most
-  laptops is managed-mode-only, which is handled gracefully.
-- **Windows**: monitor mode is not supported — AP scanning falls back to
-  what standard APIs expose, and results are sparser. Vendor lookup, ARP
-  inventory, watch mode, and grading all work.
-- **macOS**: untested; sniffing requires root and adapter support.
-- Without `scapy`, ARP scanning degrades to reading the kernel neighbour
-  table (sparser) and monitor sniffing is unavailable.
-- Without `rich`, reports render as plain text (no colors/tables).
+  cracking, no WPS attacks, no association attempts — enforced in CI:
+  `grep -ri "deauth\|inject\|handshake\|crack" sentinelwifi/` must return
+  nothing on every push.
+- Scanning is receive-only sniffing, standard client scans (nmcli/iw/
+  netsh), DHCP-lease parsing, and ARP/TCP-connect to your own subnet.
+- If a feature needs monitor mode and your adapter can't do it, the tool
+  degrades to managed-mode scanning **and tells you** — never crashes,
+  never silently skips.
 
 ## Grading rubric (transparent — see `scoring.py`)
 
@@ -75,69 +79,48 @@ Start at 100, subtract penalties, bands A≥90 B≥75 C≥60 D≥40 F<40.
 | Finding | Penalty |
 |---|---|
 | Open or WEP WiFi | 45 (critical) |
+| Unknown DHCP server (rogue DHCP) | 20 (critical) |
 | Possible evil twin (same SSID, 2+ BSSIDs) | 20 (critical) |
 | 3+ unknown/new devices | 25 (critical) |
-| Router admin page on HTTP (cleartext password) | 15 (warning) |
-| 1–2 unknown/new devices | 10 (warning) |
-| SSID leaks router brand/model | 10 (warning) |
-| Crowded channel (co + adjacent ≥ 6 APs) | 5 |
+| Router admin on HTTP (cleartext password) | 15 (warning) |
+| Risky services exposed (Telnet/FTP/VNC/RDP/TR-069…) | 10 (warning) |
+| 1–2 unknown devices / SSID leaks router brand | 10 each (warning) |
+| New APs visible that copy your SSID | 10 |
+| New APs visible (other) / crowded channel | 3 / 5 |
 | WPA2 when WPA3 is available | 5 (info) |
 
-## Sample report
+## Install
 
-```
-════════════════════════════════════════════════════════════════
-  SentinelWiFi — Personal Network Security Report
-  (auditing networks you own or are authorized to test)
-════════════════════════════════════════════════════════════════
-
-  Overall grade: C  (60/100)
-
-  ▶ YOUR CONNECTION
-    SSID        : dlink-Home-2.4
-    BSSID       : C4:AD:34:12:9B:F0
-    Channel     : 6  (band: 2.4 GHz)
-    Signal      : -52 dBm
-    Encryption  : WPA2
-    Router admin: HTTP  ⚠ passwords sent in cleartext
-
-  ▶ WI-FI ENVIRONMENT
-    9 network(s) visible:
-      dlink-Home-2.4            ch 6   -52 dBm  WPA2
-      dlink-Home-2.4            ch 11  -71 dBm  WPA2   ⚠
-      ...
-
-  ▶ FINDINGS & FIXES
-    [WARNING  ] Network name reveals your router model
-    [WARNING  ] Router admin page uses HTTP (not HTTPS)
-    [WARNING  ] WiFi channel is crowded
-    [INFO     ] WiFi uses WPA2
-
-  Report generated locally. No data left this machine.
-════════════════════════════════════════════════════════════════
+```bash
+git clone https://github.com/Nav54877/SentinelWiFi.git
+cd SentinelWiFi
+pip install -r requirements.txt
+python sentinel.py selftest   # see what your machine needs
 ```
 
-## Project layout
+## Platform notes (honest limitations)
 
+- **Linux (Ubuntu/Kali)**: full feature set. Monitor mode needs a
+  monitor-capable adapter (Atheros/Realtek USB) + `iw`; laptop built-ins
+  are usually managed-mode-only — handled gracefully.
+- **Windows**: monitor mode unsupported — `netsh`-based current-connection
+  and gateway detection work; inventory, ports, watch, grading, HTML all work.
+- **macOS**: untested; sniffing needs root + adapter support.
+- Without `scapy`: ARP falls back to the kernel neighbour table; without
+  `rich`: plain-text console. Everything still runs.
+
+## Development
+
+```bash
+python -m unittest discover -s tests   # 29 tests, no network needed
+python sentinel.py demo                # eyeball the report rendering
 ```
-sentinelwifi/
-  sentinel.py        # CLI entry (argparse: scan, devices, watch, report)
-  sentinelwifi/
-    __init__.py
-    iface.py         # adapter detection, monitor-mode attempt + fallback
-    ap_scan.py       # passive AP enumeration + rogue detection
-    lan_scan.py      # ARP inventory + known-device tracking
-    scoring.py       # A–F grading rules (transparent & commented)
-    report.py        # rich console report + --json
-    vendors.py       # small bundled OUI prefix map
-  requirements.txt
-  README.md
-```
 
-## Legal / ethical scope
+CI (GitHub Actions, Python 3.10–3.12) runs the test suite, the
+passive-only grep, the header check, and demo-mode smoke tests on every
+push.
 
-Every source file carries the header: *"For auditing networks you own or
-are authorized to test."* This tool exists to help you secure your own
-home network. Do not use it to observe, enumerate, or test networks,
-devices, or traffic you do not own or lack explicit written authorization
-to assess.
+## License
+
+MIT — see `LICENSE`. This tool is for auditing networks you own or are
+authorized to test; the authors accept no liability for misuse.

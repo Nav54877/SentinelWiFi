@@ -104,10 +104,15 @@ def detect_adapters() -> list[AdapterInfo]:
     return adapters
 
 
-def pick_default_adapter() -> AdapterInfo | None:
+def pick_default_adapter(prefer: str = "") -> AdapterInfo | None:
     """Choose the adapter to audit: first wireless with an IP, else any
-    adapter with an IP, else the first non-loopback adapter."""
+    adapter with an IP, else the first non-loopback adapter.
+    `prefer` forces a specific interface name if it exists."""
     adapters = detect_adapters()
+    if prefer:
+        for a in adapters:
+            if a.name == prefer:
+                return a
     for a in adapters:
         if a.wireless and a.ip:
             return a

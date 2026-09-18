@@ -48,6 +48,34 @@ def get_current_connection(adapter: AdapterInfo) -> dict:
     if not adapter.wireless:
         return info
 
+    # Windows: netsh gives everything we need
+    import sys as _sys
+    if _sys.platform.startswith("win") and shutil.which("netsh"):
+        try:
+            out = subprocess.run(["netsh", "wlan", "show", "interfaces"],
+                                 capture_output=True, text=True, timeout=15)
+            for line in out.stdout.splitlines():
+                parts = line.split(":", 1)
+                if len(parts) != 2:
+                    continue
+                key, val = parts[0].strip(), parts[1].strip()
+                if key == "SSID" and val:
+                    info["ssid"] = val
+                elif key == "BSSID":
+                    info["bssid"] = val.upper()
+                elif key == "Signal":
+                    pct = int(val.rstrip(" %"))
+                    info["signal"] = min(-30, -30 - (100 - pct) // 2)
+                elif key == "Channel":
+                    info["channel"] = int(val.split()[0])
+                    info["band"] = _band_for_channel(info["channel"])
+                elif key == "Authentication":
+                    info["encryption"] = _normalize_security(val)
+            if info["ssid"]:
+                return info
+        except Exception:
+            pass
+
     # Try nmcli first (distro-agnostic-ish, very reliable output)
     if shutil.which("nmcli"):
         try:
@@ -229,7 +257,8 @@ def _channel_overlap_24(chan: int) -> list[int]:
     return [c for c in range(max(1, chan - 4), min(13, chan + 4) + 1) if c != chan]
 
 
-def analyze_environment(aps: list[AccessPoint], current: dict) -> list[RogueFinding]:
+def analyze_environment(aps: list[AccessPoint], current: dict,
+                        trusted: frozenset | None = None) -> list[RogueFinding]:
     """Evil-twin, unexpected-channel and congestion findings."""
     findings: list[RogueFinding] = []
 
@@ -238,10 +267,11 @@ def analyze_environment(aps: list[AccessPoint], current: dict) -> list[RogueFind
         by_ssid.setdefault(ap.ssid, []).append(ap)
 
     my_ssid = current.get("ssid", "")
+    trusted = trusted or frozenset()
 
-    # Evil twin: same SSID, 2+ distinct BSSIDs
+    # Evil twin: same SSID, 2+ distinct BSSIDs (minus ones you told us you own)
     for ssid, group in by_ssid.items():
-        bssids = {a.bssid for a in group}
+        bssids = {a.bssid for a in group} - set(trusted)
         if len(bssids) >= 2:
             tag = "YOUR network" if ssid == my_ssid else f"SSID '{ssid}'"
             findings.append(RogueFinding(

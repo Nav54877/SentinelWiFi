@@ -190,3 +190,64 @@ def compute_grade(findings: list[Finding]) -> ScoreResult:
     return ScoreResult(grade=grade, score=score,
                        findings=sorted(findings,
                                        key=lambda f: {"critical": 0, "warning": 1, "info": 2}[f.severity]))
+
+
+# ---------------------------------------------------------------------------
+# v2 checks: DHCP, exposed services, new APs
+# ---------------------------------------------------------------------------
+
+def check_dhcp(dhcp_info) -> "Finding | None":
+    """Rogue-DHCP: a server other than the gateway handed out network config."""
+    if dhcp_info is None or not getattr(dhcp_info, "servers", None):
+        return None
+    if not dhcp_info.rogue:
+        return Finding(
+            id="dhcp-ok", severity="info", title="DHCP server looks normal",
+            explanation=dhcp_info.detail, fix="No action needed.", penalty=0)
+    return Finding(
+        id="dhcp-rogue", severity="critical",
+        title="Unknown DHCP server on your network",
+        explanation=dhcp_info.detail,
+        fix="Disconnect and check what device is plugged into your router; "
+            "reboot the router, then re-run this scan. If it persists, "
+            "someone may be on your network — change the WiFi password.",
+        penalty=20)
+
+
+def check_exposed_services(risk_notes: list[str]) -> "Finding | None":
+    """Devices exposing dangerous services to anyone on the LAN."""
+    if not risk_notes:
+        return None
+    top = "; ".join(risk_notes[:4])
+    extra = f" (and {len(risk_notes) - 4} more)" if len(risk_notes) > 4 else ""
+    return Finding(
+        id="exposed-services", severity="warning",
+        title=f"{len(risk_notes)} risky service(s) exposed on your devices",
+        explanation=("Some of your devices offer services like Telnet, FTP or "
+                     "remote desktop to anyone connected to your WiFi. On an "
+                     "open or compromised network these are easy entry points: "
+                     f"{top}{extra}."),
+        fix="Disable unused services in each device's settings (router: turn "
+            "off Telnet/TR-069/remote admin; PCs: disable SMBv1, close RDP "
+            "unless you use it). Re-scan to confirm.",
+        penalty=10)
+
+
+def check_new_aps(new_aps: list, current_ssid: str) -> "Finding | None":
+    """APs visible now that weren't visible last run (from local history)."""
+    if not new_aps:
+        return None
+    names = ", ".join(sorted({a.ssid for a in new_aps})[:5])
+    near_yours = any(a.ssid == current_ssid for a in new_aps)
+    sev = "warning" if near_yours else "info"
+    return Finding(
+        id="new-aps", severity=sev,
+        title=f"{len(new_aps)} new access point(s) visible since last scan",
+        explanation=(f"These networks appeared near you since the last run: "
+                     f"{names}. A new network copying your own SSID can be an "
+                     "evil twin." if near_yours else
+                     f"These networks appeared near you since the last run: "
+                     f"{names}. Usually just neighbours, but worth a glance."),
+        fix="If one copies your network's name, verify the BSSID against your "
+            "router's sticker before joining anything.",
+        penalty=10 if near_yours else 3)
