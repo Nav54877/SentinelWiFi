@@ -1,0 +1,87 @@
+════════════════════════════════════════════════════════════════
+  SentinelWiFi — Personal Network Security Report
+  (auditing networks you own or are authorized to test)
+════════════════════════════════════════════════════════════════
+
+  Overall grade: F  (20/100)
+
+  ▶ YOUR CONNECTION
+    SSID        : dlink-Home-2.4
+    BSSID       : C4:AD:34:12:9B:F0
+    Channel     : 6  (band: 2.4 GHz)
+    Signal      : -52 dBm
+    Encryption  : WPA2
+    Router admin: HTTP  ⚠ passwords sent in cleartext
+
+  ▶ DHCP (who gave you your network settings)
+    Servers: 192.168.1.1   OK
+    DHCP server matches your gateway (192.168.1.1). OK.
+
+  ▶ WI-FI ENVIRONMENT
+    5 network(s) visible:
+      dlink-Home-2.4               ch 6    -52 dBm  WPA2
+      HomeNet-5G                   ch 44   -55 dBm  WPA3
+      dlink-Home-2.4               ch 11   -71 dBm  WPA2
+      PrettyFlyForAWiFi            ch 6    -78 dBm  WPA2
+      xfinitywifi                  ch 1    -83 dBm  OPEN ⚠
+
+    [⚠ WARNING] SSID 'dlink-Home-2.4' is being broadcast by 2 different access points (C4:AD:34:12:9B:F0, F0:9F:C2:77:AA:01). If this is YOUR network, one of them may be an evil twin — verify which BSSID is your real router (check the sticker on it).
+    [ℹ info] Your SSID 'dlink-Home-2.4' also appears on channel 11 (you are on 6). Could be a dual-band router (normal) or a copycat AP.
+
+  ▶ DEVICES ON YOUR NETWORK
+    IP               MAC                VENDOR                     NOTES
+    192.168.1.1      C4:AD:34:12:9B:F0  D-Link                     GATEWAY; ⚠ :7547, :23
+    192.168.1.2      B8:27:EB:44:10:9A  Raspberry Pi Foundation    this machine
+    192.168.1.23     F0:9F:C2:77:AA:01  Espressif (ESP32/ESP8266)  ★ NEW — first time seen
+    192.168.1.42     AC:BC:32:9E:11:02  Samsung                    
+
+    Exposed services (scan of your own devices):
+      192.168.1.1      :80    HTTP  — HTTP/1.0 200 OK
+      192.168.1.1      :7547  TR-069 router mgmt
+      192.168.1.1      :23    Telnet (cleartext login)
+      192.168.1.42     :445   SMB file sharing
+
+  ▶ SINCE LAST RUN
+    Run #12
+    + 1 new AP(s): dlink-Home-2.4
+    + 1 new device(s): 192.168.1.23
+    − 1 device(s) gone: DE:AD:BE:EF:00:01
+
+  ▶ FINDINGS & FIXES
+    [CRITICAL] Possible fake WiFi network (evil twin)  (−20)
+               Why: SSID 'dlink-Home-2.4' is being broadcast by 2 different access points (C4:AD:34:12:9B:F0, F0:9F:C2:77:AA:01). If this is YOUR network, one of them may be an evil twin — verify which BSSID is your real router (check the sticker on it).
+               Fix: Before entering any password, check your device's saved network details and compare the router's MAC (BSSID) with the sticker on the physical router. When in doubt, use mobile data.
+
+    [WARNING ] Router admin page uses HTTP (not HTTPS)  (−15)
+               Why: When you log into your router at http://192.168.1.1, your admin password travels in plain text — anyone on your WiFi who is listening can read it.
+               Fix: If the router offers HTTPS admin access, enable it; otherwise avoid managing the router from untrusted devices on the network.
+
+    [WARNING ] Network name reveals your router model  (−10)
+               Why: 'dlink-Home-2.4' hints at the router brand/model. Attackers use that to look up known default passwords and known weaknesses for that exact device.
+               Fix: Rename your network to something neutral in the router settings (no brand, no family name, no address).
+
+    [WARNING ] 3 risky service(s) exposed on your devices  (−10)
+               Why: Some of your devices offer services like Telnet, FTP or remote desktop to anyone connected to your WiFi. On an open or compromised network these are easy entry points: 192.168.1.1 exposes TR-069 router mgmt on port 7547; 192.168.1.1 exposes Telnet (cleartext login) on port 23; 192.168.1.42 exposes SMB file sharing on port 445.
+               Fix: Disable unused services in each device's settings (router: turn off Telnet/TR-069/remote admin; PCs: disable SMBv1, close RDP unless you use it). Re-scan to confirm.
+
+    [WARNING ] 1 new access point(s) visible since last scan  (−10)
+               Why: These networks appeared near you since the last run: dlink-Home-2.4. A new network copying your own SSID can be an evil twin.
+               Fix: If one copies your network's name, verify the BSSID against your router's sticker before joining anything.
+
+    [WARNING ] 1 new device(s) on your network  (−10)
+               Why: A device you have not seen before is connected to your WiFi.
+               Fix: Check the device list in your router's app.
+
+    [INFO    ] WiFi uses WPA2  (−5)
+               Why: WPA2 is solid, but WPA3 is stronger against password-guessing attacks.
+               Fix: If your router supports it, upgrade to WPA3.
+
+    [INFO    ] DHCP server looks normal
+               Why: DHCP server matches your gateway (192.168.1.1). OK.
+               Fix: No action needed.
+
+  ▶ PLATFORM NOTES / LIMITATIONS
+    - Demo mode: synthetic data, no network access performed.
+
+  Report generated locally. No data left this machine.
+════════════════════════════════════════════════════════════════
