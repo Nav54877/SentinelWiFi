@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="876" font-family="Menlo,Consolas,monospace">
+<rect width="780" height="876" rx="10" fill="#1a1b26"/>
+<rect width="780" height="26" rx="10" fill="#24283b"/>
+<rect y="16" width="780" height="10" fill="#24283b"/>
+<circle cx="16" cy="13" r="5" fill="#f7768e"/><circle cx="34" cy="13" r="5" fill="#e0af68"/><circle cx="52" cy="13" r="5" fill="#9ece6a"/>
+<text x="390" y="17" fill="#7982a9" font-size="11" text-anchor="middle">sentinelwifi report (demo data)</text>
+<text x="14" y="44" fill="#7aa2f7" font-size="12.5">════════════════════════════════════════════════════════════════</text>
+<text x="14" y="62" fill="#c0caf5" font-size="12.5">  SentinelWiFi — Personal Network Security Report</text>
+<text x="14" y="80" fill="#c0caf5" font-size="12.5">  (auditing networks you own or are authorized to test)</text>
+<text x="14" y="98" fill="#7aa2f7" font-size="12.5">════════════════════════════════════════════════════════════════</text>
+<text x="14" y="116" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="134" fill="#ffffff" font-size="12.5">  Overall grade: F  (20/100)</text>
+<text x="14" y="152" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="170" fill="#7aa2f7" font-size="12.5">  ▶ YOUR CONNECTION</text>
+<text x="14" y="188" fill="#c0caf5" font-size="12.5">    SSID        : dlink-Home-2.4</text>
+<text x="14" y="206" fill="#c0caf5" font-size="12.5">    BSSID       : C4:AD:34:12:9B:F0</text>
+<text x="14" y="224" fill="#c0caf5" font-size="12.5">    Channel     : 6  (band: 2.4 GHz)</text>
+<text x="14" y="242" fill="#c0caf5" font-size="12.5">    Signal      : -52 dBm</text>
+<text x="14" y="260" fill="#c0caf5" font-size="12.5">    Encryption  : WPA2</text>
+<text x="14" y="278" fill="#f7768e" font-size="12.5">    Router admin: HTTP  ⚠ passwords sent in cleartext</text>
+<text x="14" y="296" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="314" fill="#7aa2f7" font-size="12.5">  ▶ DHCP (who gave you your network settings)</text>
+<text x="14" y="332" fill="#c0caf5" font-size="12.5">    Servers: 192.168.1.1   OK</text>
+<text x="14" y="350" fill="#c0caf5" font-size="12.5">    DHCP server matches your gateway (192.168.1.1). OK.</text>
+<text x="14" y="368" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="386" fill="#7aa2f7" font-size="12.5">  ▶ WI-FI ENVIRONMENT</text>
+<text x="14" y="404" fill="#c0caf5" font-size="12.5">    5 network(s) visible:</text>
+<text x="14" y="422" fill="#c0caf5" font-size="12.5">      dlink-Home-2.4               ch 6    -52 dBm  WPA2</text>
+<text x="14" y="440" fill="#c0caf5" font-size="12.5">      HomeNet-5G                   ch 44   -55 dBm  WPA3</text>
+<text x="14" y="458" fill="#c0caf5" font-size="12.5">      dlink-Home-2.4               ch 11   -71 dBm  WPA2</text>
+<text x="14" y="476" fill="#c0caf5" font-size="12.5">      PrettyFlyForAWiFi            ch 6    -78 dBm  WPA2</text>
+<text x="14" y="494" fill="#f7768e" font-size="12.5">      xfinitywifi                  ch 1    -83 dBm  OPEN ⚠</text>
+<text x="14" y="512" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="530" fill="#f7768e" font-size="12.5">    [⚠ WARNING] SSID &#x27;dlink-Home-2.4&#x27; is being broadcast by 2 different access points (C4:AD:34:12:9B:F0, F0:9F:C2:77:AA:01). If this is YOUR network, one of them may be an evil twin — verify which BSSID is your real router (check the sticker on it).</text>
+<text x="14" y="548" fill="#9ece6a" font-size="12.5">    [ℹ info] Your SSID &#x27;dlink-Home-2.4&#x27; also appears on channel 11 (you are on 6). Could be a dual-band router (normal) or a copycat AP.</text>
+<text x="14" y="566" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="584" fill="#7aa2f7" font-size="12.5">  ▶ DEVICES ON YOUR NETWORK</text>
+<text x="14" y="602" fill="#c0caf5" font-size="12.5">    IP               MAC                VENDOR                     NOTES</text>
+<text x="14" y="620" fill="#f7768e" font-size="12.5">    192.168.1.1      C4:AD:34:12:9B:F0  D-Link                     GATEWAY; ⚠ :7547, :23</text>
+<text x="14" y="638" fill="#c0caf5" font-size="12.5">    192.168.1.2      B8:27:EB:44:10:9A  Raspberry Pi Foundation    this machine</text>
+<text x="14" y="656" fill="#e0af68" font-size="12.5">    192.168.1.23     F0:9F:C2:77:AA:01  Espressif (ESP32/ESP8266)  ★ NEW — first time seen</text>
+<text x="14" y="674" fill="#c0caf5" font-size="12.5">    192.168.1.42     AC:BC:32:9E:11:02  Samsung                    </text>
+<text x="14" y="692" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="710" fill="#c0caf5" font-size="12.5">    Exposed services (scan of your own devices):</text>
+<text x="14" y="728" fill="#c0caf5" font-size="12.5">      192.168.1.1      :80    HTTP  — HTTP/1.0 200 OK</text>
+<text x="14" y="746" fill="#c0caf5" font-size="12.5">      192.168.1.1      :7547  TR-069 router mgmt</text>
+<text x="14" y="764" fill="#c0caf5" font-size="12.5">      192.168.1.1      :23    Telnet (cleartext login)</text>
+<text x="14" y="782" fill="#c0caf5" font-size="12.5">      192.168.1.42     :445   SMB file sharing</text>
+<text x="14" y="800" fill="#c0caf5" font-size="12.5"> </text>
+<text x="14" y="818" fill="#7aa2f7" font-size="12.5">  ▶ SINCE LAST RUN</text>
+<text x="14" y="836" fill="#c0caf5" font-size="12.5">    Run #12</text>
+<text x="14" y="854" fill="#c0caf5" font-size="12.5">    + 1 new AP(s): dlink-Home-2.4</text>
+</svg>
