@@ -6,4 +6,4 @@ Passive observation and local scans only. Nothing is ever transmitted, no traffi
 the local subnet, no cloud calls, no telemetry. All data stays in ~/.sentinelwifi/.
 """
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"

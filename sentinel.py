@@ -126,6 +126,9 @@ def _build_findings(current, aps, rogue, devices, admin_proto, gateway,
 
 
 def _render(data: ReportData, args) -> None:
+    if getattr(args, "quiet", False):
+        from dataclasses import replace
+        data = replace(data, limitations=[])
     if getattr(args, "json", False):
         print(report_to_json(data))
     else:
@@ -177,6 +180,18 @@ def cmd_devices(args, cfg) -> int:
     subnet = _subnet24(local_ip)
     devices = lan_scan.arp_scan(subnet, timeout=args.timeout)
     lan_scan.mark_new_devices(devices)
+    if getattr(args, "csv", False):
+        import csv as _csv
+        import io as _io
+        buf = _io.StringIO()
+        w = _csv.writer(buf)
+        w.writerow(["ip", "mac", "vendor", "is_gateway", "is_self",
+                    "is_new", "hostname"])
+        for d in devices:
+            w.writerow([d.ip, d.mac, d.vendor, d.is_gateway, d.is_self,
+                        d.is_new, d.hostname])
+        print(buf.getvalue().strip())
+        return 0
     services = {}
     if getattr(args, "ports", False):
         services = ports.scan_services([d.ip for d in devices],
@@ -448,6 +463,8 @@ def main(argv=None) -> int:
     parent.add_argument("--html", metavar="FILE", default=None,
                         help=argparse.SUPPRESS)
     parent.add_argument("--iface", default=None, help=argparse.SUPPRESS)
+    parent.add_argument("--quiet", action="store_true",
+                        help="skip platform notes (script-friendly)")
 
     def common(sp):
         sp.add_argument("--window", type=int,
@@ -461,6 +478,8 @@ def main(argv=None) -> int:
     dp.add_argument("--timeout", type=int, default=4)
     dp.add_argument("--ports", action="store_true",
                     help="also connect-scan curated ports on found devices")
+    dp.add_argument("--csv", action="store_true",
+                    help="CSV output for scripts and dashboards")
     dp.set_defaults(func=cmd_devices)
     pp = sub.add_parser("ports", parents=[parent], help="exposed-service scan of your subnet")
     pp.add_argument("--timeout", type=int, default=4)
@@ -482,6 +501,9 @@ def main(argv=None) -> int:
                     help="skip the exposed-services scan")
     rp.set_defaults(func=cmd_report)
     sub.add_parser("selftest", parents=[parent], help="verify install & environment"). \
+        set_defaults(func=cmd_selftest)
+    sub.add_parser("doctor", parents=[parent],
+                   help="alias of selftest (environment health check)"). \
         set_defaults(func=cmd_selftest)
     sub.add_parser("demo", parents=[parent], help="render a report from synthetic data"). \
         set_defaults(func=cmd_demo)

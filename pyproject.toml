@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinelwifi"
+version = "2.1.0"
+description = "Passive, defensive auditor for your own home WiFi and LAN: grades your network security and tells you how to fix it"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "SentinelWiFi contributors" }]
+keywords = ["wifi", "network", "security", "audit", "lan", "privacy"]
+classifiers = [
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: System :: Networking :: Monitoring",
+]
+dependencies = [
+    "scapy>=2.5.0,<3.0.0",
+    "rich>=13.0.0,<15.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Nav54877/SentinelWiFi"
+Changelog = "https://github.com/Nav54877/SentinelWiFi/blob/main/CHANGELOG.md"
+
+[project.scripts]
+sentinelwifi = "sentinel:main"
+
+[tool.setuptools]
+packages = ["sentinelwifi"]
+py-modules = ["sentinel"]

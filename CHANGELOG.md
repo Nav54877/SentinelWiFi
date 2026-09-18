@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.1.0
+
+Professionalization pass:
+
+- PyPI-ready packaging: `pipx install git+https://github.com/Nav54877/SentinelWiFi.git`
+  gives you a `sentinelwifi` command.
+- `doctor` alias for `selftest`.
+- `--csv` on `devices` (ip, mac, vendor, flags, hostname) and `--quiet`
+  global flag for cron/dashboard use.
+- SECURITY.md, CONTRIBUTING.md, issue/PR templates, ROADMAP.md.
+- README: support matrix up top, explicit "does not do" section, cron
+  example.
+
 ## v2.0.3
 
 Fixes from real-world runs:
