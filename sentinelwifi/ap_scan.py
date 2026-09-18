@@ -105,7 +105,7 @@ def get_current_connection(adapter: AdapterInfo) -> dict:
         except Exception:
             pass
 
-    # Fallback: iw dev <if> link
+    # Fallback: iw dev <if> link (SSID/BSSID/signal/freq)
     if shutil.which("iw"):
         try:
             out = subprocess.run(["iw", "dev", adapter.name, "link"],
@@ -118,9 +118,104 @@ def get_current_connection(adapter: AdapterInfo) -> dict:
                     info["bssid"] = line.split()[2].upper()
                 elif line.startswith("signal:"):
                     info["signal"] = int(float(line.split()[1]))
+                elif line.startswith("freq:"):
+                    info["channel"] = _FREQ_TO_CHAN.get(int(float(line[5:].strip())), 0)
+                    info["band"] = _band_for_channel(info["channel"])
+        except Exception:
+            pass
+
+    # Channel from interface info if still missing
+    if not info["channel"] and shutil.which("iw"):
+        try:
+            out = subprocess.run(["iw", "dev", adapter.name, "info"],
+                                 capture_output=True, text=True, timeout=5)
+            for line in out.stdout.splitlines():
+                if "channel" in line:
+                    info["channel"] = int(line.split("channel")[1].split()[0])
+                    info["band"] = _band_for_channel(info["channel"])
+                    break
+        except Exception:
+            pass
+
+    # Encryption + channel via a one-off `iw scan` matched to our BSSID
+    if info["encryption"] == "unknown" and info.get("bssid") and shutil.which("iw"):
+        try:
+            out = subprocess.run(["iw", "dev", adapter.name, "scan"],
+                                 capture_output=True, text=True, timeout=25)
+            for ap in _parse_iw_scan(out.stdout):
+                if ap.bssid == info["bssid"]:
+                    info["encryption"] = ap.encryption
+                    if not info["channel"] and ap.channel:
+                        info["channel"] = ap.channel
+                        info["band"] = ap.band
+                    break
         except Exception:
             pass
     return info
+
+
+_FREQ_TO_CHAN: dict[int, int] = {
+    2412: 1, 2417: 2, 2422: 3, 2427: 4, 2432: 5, 2437: 6, 2442: 7,
+    2447: 8, 2452: 9, 2457: 10, 2462: 11, 2467: 12, 2472: 13, 2484: 14,
+    5180: 36, 5200: 40, 5220: 44, 5240: 48, 5260: 52, 5300: 56, 5320: 60,
+    5500: 100, 5520: 104, 5540: 108, 5560: 112, 5580: 116, 5600: 120,
+    5620: 124, 5640: 128, 5660: 132, 5680: 136, 5700: 140, 5720: 144,
+    5745: 149, 5765: 153, 5785: 157, 5805: 161, 5825: 165,
+}
+
+
+def _parse_iw_scan(text: str) -> list[AccessPoint]:
+    """Parse `iw dev <if> scan` output into AccessPoints (stdlib only)."""
+    aps: list[dict] = []
+    cur: dict | None = None
+    for line in text.splitlines():
+        s = line.strip()
+        if s.startswith("BSS "):
+            if cur:
+                aps.append(cur)
+            bssid = s.split()[1].split("(")[0]
+            cur = {"bssid": bssid, "ssid": "", "freq": 0, "signal": 0,
+                   "privacy": False, "rsn": False, "wpa": False, "sae": False}
+        elif cur is None:
+            continue
+        elif s.startswith("SSID:"):
+            cur["ssid"] = s[5:].strip()
+        elif s.startswith("freq:"):
+            try:
+                cur["freq"] = int(float(s[5:].strip()))
+            except ValueError:
+                pass
+        elif s.startswith("signal:"):
+            try:
+                cur["signal"] = int(float(s[7:].strip().split()[0]))
+            except ValueError:
+                pass
+        elif s.startswith("capability:"):
+            cur["privacy"] = "Privacy" in s
+        elif s.startswith("RSN:"):
+            cur["rsn"] = True
+        elif s.startswith("WPA:"):
+            cur["wpa"] = True
+        elif "00-0f-ac-8" in s.lower() or "SAE" in s:
+            cur["sae"] = True
+    if cur:
+        aps.append(cur)
+    out: list[AccessPoint] = []
+    for c in aps:
+        if c["rsn"]:
+            enc = "WPA3" if c["sae"] else "WPA2"
+        elif c["wpa"]:
+            enc = "WPA2"
+        elif c["privacy"]:
+            enc = "WEP"
+        else:
+            enc = "Open"
+        chan = _FREQ_TO_CHAN.get(c["freq"], 0)
+        out.append(AccessPoint(ssid=c["ssid"] or "(hidden)",
+                               bssid=c["bssid"].upper(), channel=chan,
+                               signal=c["signal"], encryption=enc,
+                               band=_band_for_channel(chan)))
+    return out
 
 
 def _normalize_security(sec: str) -> str:
@@ -211,11 +306,12 @@ def sniff_aps_monitor(ifname: str, seconds: int = SCAN_WINDOW_SECONDS) -> list[A
     return list(aps.values())
 
 
-def managed_mode_scan() -> list[AccessPoint]:
+def managed_mode_scan(iface: str = "") -> list[AccessPoint]:
     """Managed-mode fallback scan (no monitor mode needed).
 
-    Uses nmcli or `iw dev <if> scan` — standard client scans, still only
-    listening to what APs broadcast; we send nothing ourselves.
+    Prefers nmcli; falls back to `iw dev <if> scan` when nmcli is absent
+    (minimal systems, servers). Both are standard client scans — we listen
+    to what APs broadcast and send nothing ourselves.
     """
     aps: list[AccessPoint] = []
     if shutil.which("nmcli"):
@@ -243,6 +339,14 @@ def managed_mode_scan() -> list[AccessPoint]:
                     ))
                 if aps:
                     return aps
+        except Exception:
+            pass
+    if not aps and iface and shutil.which("iw"):
+        try:
+            out = subprocess.run(["iw", "dev", iface, "scan"],
+                                 capture_output=True, text=True, timeout=25)
+            if out.returncode == 0:
+                return _parse_iw_scan(out.stdout)
         except Exception:
             pass
     return aps

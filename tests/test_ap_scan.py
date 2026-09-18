@@ -68,3 +68,40 @@ class TestUnexpectedChannel(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestParseIwScan(unittest.TestCase):
+    SAMPLE = """
+BSS 10:20:30:40:50:60(on wlp3s0)
+\tTSF: 12345 usec (0d, 0h, 0m)
+\tfreq: 2437
+\tcapability: ESS Privacy ShortSlotTime (0x0411)
+\tsignal: -41.00 dBm
+\tSSID: RouterTest-2.4
+\tRSN:\t * Version: 1
+\t * Authentication suites: PSK 00-0f-ac-2
+BSS f0:9f:c2:77:aa:01(on wlp3s0)
+\tfreq: 2462
+\tcapability: ESS Privacy ShortPreamble ShortSlotTime (0x0431)
+\tsignal: -71.00 dBm
+\tSSID: OpenCafe
+\tRSN:\t * Version: 1
+\t * Authentication suites: SAE 00-0f-ac-8
+BSS 0a:11:22:33:44:55(on wlp3s0)
+\tfreq: 2412
+\tcapability: ESS (0x0001)
+\tsignal: -83.00 dBm
+\tSSID: xfinitywifi
+"""
+
+    def test_parses_bss_blocks(self):
+        from sentinelwifi.ap_scan import _parse_iw_scan
+        aps = {a.ssid: a for a in _parse_iw_scan(self.SAMPLE)}
+        self.assertEqual(len(aps), 3)
+        self.assertEqual(aps["RouterTest-2.4"].channel, 6)
+        self.assertEqual(aps["RouterTest-2.4"].encryption, "WPA2")
+        self.assertEqual(aps["RouterTest-2.4"].band, "2.4")
+        self.assertEqual(aps["OpenCafe"].channel, 11)
+        self.assertEqual(aps["OpenCafe"].encryption, "WPA3")
+        self.assertEqual(aps["xfinitywifi"].encryption, "Open")
+        self.assertEqual(aps["xfinitywifi"].bssid, "0A:11:22:33:44:55")

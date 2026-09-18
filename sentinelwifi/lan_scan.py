@@ -123,18 +123,52 @@ def arp_scan(subnet: str, timeout: int = 4) -> list[Device]:
             mac = str(rcv.hwsrc).upper()
             devices[ip] = Device(ip=ip, mac=mac, vendor=lookup_vendor(mac))
     except ImportError:
-        # Fallback: read the kernel neighbour table (passive, no new traffic)
-        try:
-            out = subprocess.run(["ip", "neigh", "show"], capture_output=True,
-                                 text=True, timeout=10)
-            for line in out.stdout.splitlines():
-                parts = line.split()
-                if len(parts) >= 5 and parts[2] == "lladdr":
-                    ip, mac = parts[0], parts[4].upper()
-                    if ipaddress.ip_address(ip) in network:
-                        devices[ip] = Device(ip=ip, mac=mac, vendor=lookup_vendor(mac))
-        except Exception:
-            pass
+        # Fallback (no scapy): prime the kernel ARP table with a fast
+        # connect-sweep of our own subnet, then read it back. Refused and
+        # timed-out connections both populate the neighbour cache.
+        import sys as _sys
+        from concurrent.futures import ThreadPoolExecutor
+        if _sys.platform.startswith("win"):
+            try:
+                out = subprocess.run(["arp", "-a"], capture_output=True,
+                                     text=True, timeout=15)
+                for line in out.stdout.splitlines():
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        try:
+                            ip = parts[0]
+                            mac = parts[1].replace("-", ":").upper()
+                        except IndexError:
+                            continue
+                        if ipaddress.ip_address(ip) in network and ":" in mac:
+                            devices[ip] = Device(ip=ip, mac=mac,
+                                                 vendor=lookup_vendor(mac))
+            except Exception:
+                pass
+        else:
+            def _poke(ip: str) -> None:
+                for port in (80, 443, 22, 445):
+                    try:
+                        s = socket.create_connection((ip, port), timeout=0.25)
+                        s.close()
+                        return
+                    except OSError:
+                        continue
+            try:
+                with ThreadPoolExecutor(max_workers=128) as ex:
+                    list(ex.map(_poke, (str(h) for h in network.hosts())))
+                time.sleep(0.5)
+                out = subprocess.run(["ip", "neigh", "show"], capture_output=True,
+                                     text=True, timeout=10)
+                for line in out.stdout.splitlines():
+                    parts = line.split()
+                    if len(parts) >= 5 and parts[2] == "lladdr":
+                        ip, mac = parts[0], parts[4].upper()
+                        if ipaddress.ip_address(ip) in network:
+                            devices[ip] = Device(ip=ip, mac=mac,
+                                                 vendor=lookup_vendor(mac))
+            except Exception:
+                pass
 
     for dev in devices.values():
         dev.is_gateway = (dev.ip == gateway)

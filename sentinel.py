@@ -84,7 +84,7 @@ def _gather_wireless(adapter, window: int, cfg):
                                "(driver/permissions). Falling back to "
                                "managed-mode scan.")
     if not aps and adapter.wireless:
-        aps = ap_scan.managed_mode_scan()
+        aps = ap_scan.managed_mode_scan(adapter.name)
         if aps:
             limitations.append("Managed-mode scan only (no monitor mode): "
                                "results are snapshots, not a live channel "
