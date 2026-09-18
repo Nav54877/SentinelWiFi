@@ -55,8 +55,16 @@ def update(aps: list[AccessPoint], devices: list[Device]) -> HistoryDiff:
     old_devs: dict = data.get("devices", {})
 
     diff = HistoryDiff(runs=int(data.get("runs", 0)) + 1)
-    diff.new_aps = [a for a in aps if a.bssid not in old_aps]
-    diff.new_devices = [d for d in devices if d.mac not in old_devs]
+    # First run (or first run with real data) is a baseline, not a diff —
+    # otherwise everything looks "new" and pollutes the score.
+    if diff.runs == 1 or not old_aps:
+        diff.new_aps = []
+    else:
+        diff.new_aps = [a for a in aps if a.bssid not in old_aps]
+    if diff.runs == 1 or not old_devs:
+        diff.new_devices = []
+    else:
+        diff.new_devices = [d for d in devices if d.mac not in old_devs]
     diff.gone_devices = [mac for mac in old_devs
                          if mac not in {d.mac for d in devices}]
 

@@ -170,11 +170,12 @@ def _parse_iw_scan(text: str) -> list[AccessPoint]:
     cur: dict | None = None
     for line in text.splitlines():
         s = line.strip()
-        if s.startswith("BSS "):
+        m = re.match(r"BSS ([0-9A-Fa-f:]{17})", s)
+        if m:
             if cur:
                 aps.append(cur)
-            bssid = s.split()[1].split("(")[0]
-            cur = {"bssid": bssid, "ssid": "", "freq": 0, "signal": 0,
+            # NB: "BSS Load:"/"BSS Color:" IE lines must NOT start a block
+            cur = {"bssid": m.group(1), "ssid": "", "freq": 0, "signal": 0,
                    "privacy": False, "rsn": False, "wpa": False, "sae": False}
         elif cur is None:
             continue
@@ -253,7 +254,10 @@ def sniff_aps_monitor(ifname: str, seconds: int = SCAN_WINDOW_SECONDS) -> list[A
         from scapy.all import sniff, Dot11Beacon, Dot11Elt, RadioTap  # noqa: F401
         from scapy.layers.dot11 import Dot11
     except ImportError as exc:
-        raise RuntimeError("scapy not installed — cannot sniff in monitor mode") from exc
+        raise RuntimeError(
+            "scapy is not importable. If you installed it with "
+            "`pip install --user`, either run SentinelWiFi WITHOUT sudo or "
+            "install system-wide (`sudo pip install scapy`).") from exc
 
     aps: dict[str, AccessPoint] = {}
 
@@ -374,7 +378,10 @@ def analyze_environment(aps: list[AccessPoint], current: dict,
     trusted = trusted or frozenset()
 
     # Evil twin: same SSID, 2+ distinct BSSIDs (minus ones you told us you own)
+    my_chan = current.get("channel", 0)
     for ssid, group in by_ssid.items():
+        if ssid in ("", "(hidden)"):
+            continue  # hidden SSIDs can't be meaningfully twin-checked
         bssids = {a.bssid for a in group} - set(trusted)
         if len(bssids) >= 2:
             tag = "YOUR network" if ssid == my_ssid else f"SSID '{ssid}'"
@@ -388,7 +395,6 @@ def analyze_environment(aps: list[AccessPoint], current: dict,
 
     # Same SSID on unexpected channels
     if my_ssid and my_ssid in by_ssid:
-        my_chan = current.get("channel", 0)
         for ap in by_ssid[my_ssid]:
             if my_chan and ap.channel and ap.channel != my_chan and ap.bssid != current.get("bssid"):
                 findings.append(RogueFinding(

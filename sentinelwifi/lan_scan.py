@@ -13,6 +13,7 @@ from __future__ import annotations
 import ipaddress
 import json
 import os
+import re
 import socket
 import subprocess
 import time
@@ -160,15 +161,27 @@ def arp_scan(subnet: str, timeout: int = 4) -> list[Device]:
                 time.sleep(0.5)
                 out = subprocess.run(["ip", "neigh", "show"], capture_output=True,
                                      text=True, timeout=10)
-                for line in out.stdout.splitlines():
-                    parts = line.split()
-                    if len(parts) >= 5 and parts[2] == "lladdr":
-                        ip, mac = parts[0], parts[4].upper()
-                        if ipaddress.ip_address(ip) in network:
-                            devices[ip] = Device(ip=ip, mac=mac,
-                                                 vendor=lookup_vendor(mac))
+                for ip, mac in _parse_neigh(out.stdout):
+                    if ipaddress.ip_address(ip) in network:
+                        devices[ip] = Device(ip=ip, mac=mac,
+                                             vendor=lookup_vendor(mac))
             except Exception:
                 pass
+
+
+def _parse_neigh(text: str) -> list[tuple[str, str]]:
+    """Parse `ip neigh show` output -> [(ip, mac)]. Handles both
+    'IP dev X lladdr MAC STATE' and 'IP lladdr MAC dev X STATE' orderings."""
+    found = []
+    for line in text.splitlines():
+        parts = line.split()
+        if "lladdr" not in parts or "dev" not in parts:
+            continue
+        ip = parts[0]
+        mac = parts[parts.index("lladdr") + 1].upper()
+        if re.match(r"^[0-9A-F]{2}(:[0-9A-F]{2}){5}$", mac):
+            found.append((ip, mac))
+    return found
 
     for dev in devices.values():
         dev.is_gateway = (dev.ip == gateway)
