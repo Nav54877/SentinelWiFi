@@ -105,3 +105,39 @@ BSS 0a:11:22:33:44:55(on wlp3s0)
         self.assertEqual(aps["OpenCafe"].encryption, "WPA3")
         self.assertEqual(aps["xfinitywifi"].encryption, "Open")
         self.assertEqual(aps["xfinitywifi"].bssid, "0A:11:22:33:44:55")
+
+
+class TestIwScanEdgeCases(unittest.TestCase):
+    """Regression: 'BSS Load:'/'BSS Color:' IE lines must not create fake APs."""
+
+    SAMPLE = """
+BSS aa:bb:cc:dd:ee:ff(on wlan0)
+\tfreq: 2437
+\tsignal: -50.00 dBm
+\tcapability: ESS Privacy (0x0011)
+\tSSID: RealNet
+\tBSS Load:\t * station count: 2
+\t * channel utilisation: 45/255
+BSS 11:22:33:44:55:66(on wlan0)
+\tfreq: 2412
+\tsignal: -80.00 dBm
+\tcapability: ESS (0x0001)
+\tSSID:
+\tBSS Color: 0x00000002
+"""
+
+    def test_bss_load_lines_ignored(self):
+        from sentinelwifi.ap_scan import _parse_iw_scan
+        aps = _parse_iw_scan(self.SAMPLE)
+        self.assertEqual(len(aps), 2)
+        self.assertEqual({a.ssid for a in aps}, {"RealNet", "(hidden)"})
+        self.assertNotIn("LOAD:", {a.bssid for a in aps})
+        self.assertNotIn("COLOR:", {a.bssid for a in aps})
+
+    def test_hidden_ssid_no_evil_twin(self):
+        from sentinelwifi.ap_scan import AccessPoint, analyze_environment
+        aps = [AccessPoint("(hidden)", "AA:AA:AA:AA:AA:01", 6),
+               AccessPoint("(hidden)", "BB:BB:BB:BB:BB:02", 11)]
+        cur = {"ssid": "RealNet", "bssid": "AA:AA:AA:AA:AA:01", "channel": 6}
+        kinds = [r.kind for r in analyze_environment(aps, cur)]
+        self.assertNotIn("evil_twin", kinds)

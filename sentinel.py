@@ -277,6 +277,8 @@ def cmd_report(args, cfg) -> int:
                                        timeout=cfg["port_scan_timeout"])
     admin_proto = lan_scan.check_gateway_admin(gateway)
     dhcp_info = audit_dhcp(gateway)
+    if dhcp_info is not None and not dhcp_info.servers:
+        limitations.append(dhcp_info.detail)
     hist = history.update(aps, devices)
     score = _build_findings(current, aps, rogue, devices, admin_proto,
                             gateway, dhcp_info, services, hist, cfg)

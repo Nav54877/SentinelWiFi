@@ -73,3 +73,20 @@ class TestReportAndDemo(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestNeighParse(unittest.TestCase):
+    def test_standard_order(self):
+        from sentinelwifi.lan_scan import _parse_neigh
+        text = ("192.168.1.1 dev wlp3s0 lladdr 10:20:30:40:50:60 REACHABLE\n"
+                "192.168.1.5 dev wlp3s0  failed\n"
+                "192.168.1.9 dev wlp3s0 lladdr aa:bb:cc:dd:ee:ff STALE\n")
+        self.assertEqual(_parse_neigh(text),
+                         [("192.168.1.1", "10:20:30:40:50:60"),
+                          ("192.168.1.9", "AA:BB:CC:DD:EE:FF")])
+
+    def test_lladdr_first_order(self):
+        from sentinelwifi.lan_scan import _parse_neigh
+        text = "192.168.1.2 lladdr de:ad:be:ef:00:01 dev eth0 REACHABLE\n"
+        self.assertEqual(_parse_neigh(text),
+                         [("192.168.1.2", "DE:AD:BE:EF:00:01")])
