@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="300" font-family="Segoe UI,Helvetica,Arial,sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7982a9"/>
+    </marker>
+  </defs>
+  <rect width="720" height="300" rx="12" fill="#f6f8fc"/>
+  <text x="360" y="30" text-anchor="middle" font-size="16" font-weight="700" fill="#1a1b26">How a scan flows through SentinelWiFi</text>
+
+  <!-- column 1: sources -->
+  <g font-size="12" fill="#1a1b26">
+    <rect x="30" y="60" width="180" height="44" rx="8" fill="#e3ecff" stroke="#7aa2f7"/>
+    <text x="120" y="78" text-anchor="middle" font-weight="600">WiFi adapter</text>
+    <text x="120" y="94" text-anchor="middle" font-size="10.5" fill="#4a5070">passive sniff (monitor) / iw / netsh</text>
+
+    <rect x="30" y="118" width="180" height="44" rx="8" fill="#e3ecff" stroke="#7aa2f7"/>
+    <text x="120" y="136" text-anchor="middle" font-weight="600">ARP + service scan</text>
+    <text x="120" y="152" text-anchor="middle" font-size="10.5" fill="#4a5070">your /24 only, TCP connect</text>
+
+    <rect x="30" y="176" width="180" height="44" rx="8" fill="#e3ecff" stroke="#7aa2f7"/>
+    <text x="120" y="194" text-anchor="middle" font-weight="600">Local files</text>
+    <text x="120" y="210" text-anchor="middle" font-size="10.5" fill="#4a5070">DHCP leases, neighbour table, history</text>
+  </g>
+
+  <line x1="210" y1="140" x2="268" y2="140" stroke="#7982a9" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- column 2: analysis -->
+  <rect x="272" y="60" width="176" height="160" rx="8" fill="#fff3e0" stroke="#e0af68"/>
+  <text x="360" y="84" text-anchor="middle" font-weight="700" fill="#1a1b26">Analysis</text>
+  <g font-size="10.5" fill="#4a5070">
+    <text x="288" y="106">• encryption &amp; admin exposure</text>
+    <text x="288" y="126">• evil-twin &amp; rogue DHCP checks</text>
+    <text x="288" y="146">• channel congestion (2.4 GHz)</text>
+    <text x="288" y="166">• vendor lookup + newcomer diff</text>
+    <text x="288" y="186">• exposed risky services</text>
+    <text x="288" y="206" fill="#9aa3c0">all rules in scoring.py, commented</text>
+  </g>
+
+  <line x1="448" y1="140" x2="506" y2="140" stroke="#7982a9" stroke-width="2" marker-end="url(#arr)"/>
+
+  <!-- column 3: output -->
+  <rect x="510" y="60" width="180" height="160" rx="8" fill="#e6f7ef" stroke="#73daca"/>
+  <text x="600" y="84" text-anchor="middle" font-weight="700" fill="#1a1b26">Report</text>
+  <g font-size="10.5" fill="#4a5070">
+    <text x="526" y="106">• A–F grade with penalties</text>
+    <text x="526" y="126">• plain-language findings</text>
+    <text x="526" y="146">• console / JSON / CSV / HTML</text>
+    <text x="526" y="166">• watch mode: new-device alarm</text>
+  </g>
+
+  <text x="360" y="252" text-anchor="middle" font-size="11" fill="#4a5070">Nothing leaves the machine. Everything lands in <tspan font-family="Menlo,Consolas,monospace">~/.sentinelwifi/</tspan> only.</text>
+  <text x="360" y="272" text-anchor="middle" font-size="11" fill="#4a5070">CI greps every push to prove no offensive capability ever enters the package.</text>
+</svg>

@@ -1,17 +1,32 @@
-# SentinelWiFi
+<h1 align="center">SentinelWiFi</h1>
 
-A home network health check for your own WiFi and LAN. SentinelWiFi
-audits the security of the network you own — encryption, router admin
-exposure, rogue DHCP, evil-twin access points, and the devices on your
-subnet — then grades it A–F and tells you, in plain language, how to fix
-what it finds.
+<p align="center">
+  <strong>A home network health check for your own WiFi and LAN.</strong><br>
+  Grades your network A–F, flags what's wrong, and tells you how to fix it — in plain language.
+</p>
 
-It is not a penetration-testing tool and doesn't try to be. It listens,
-never transmits anything beyond ordinary LAN traffic, writes its data to
+<p align="center">
+  <img src="https://github.com/Nav54877/SentinelWiFi/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT">
+  <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
+  <img src="https://img.shields.io/badge/offense-none-green.svg" alt="Passive only">
+</p>
+
+<p align="center">
+  <img src="docs/demo.gif" alt="SentinelWiFi report demo (sample data)" width="700">
+</p>
+
+SentinelWiFi audits the network **you own**: WiFi encryption, router admin
+exposure, rogue DHCP servers, evil-twin access points, and the devices on
+your subnet. Everything is passive and local-only — it listens, never
+transmits anything beyond ordinary LAN traffic, writes its data to
 `~/.sentinelwifi/`, and has no telemetry, no cloud component, and no
 auto-update.
 
-![SentinelWiFi report (demo data)](docs/sample-report.svg)
+> **Scope:** run this on networks you own or are explicitly authorized to
+> test. Scanning or monitoring other people's networks is illegal in most
+> jurisdictions (CFAA in the US, computer-misuse laws in the EU, and
+> equivalents elsewhere).
 
 | | Linux | Windows | macOS |
 |---|---|---|---|
@@ -22,19 +37,16 @@ auto-update.
 | Service scan (`ports`) | ✔ | ✔ | unsupported |
 | Passive sniffing window | ✔ monitor adapter | — | — |
 
-macOS is **unsupported**: it may work, but nobody has verified it. If you try it, run `sentinelwifi doctor` and file an issue with the output.
-
-> **Scope:** run this on networks you own or are explicitly authorized to
-> test. Scanning or monitoring other people's networks is illegal in most
-> jurisdictions (CFAA in the US, computer-misuse laws in the EU, and
-> equivalents elsewhere).
+macOS is **unsupported**: it may work, but nobody has verified it. If you
+try it, run `sentinelwifi doctor` and file an issue with the output.
 
 ## Quick start
 
 ```bash
 pipx install git+https://github.com/Nav54877/SentinelWiFi.git
-sentinelwifi doctor        # check your environment first
-sudo sentinelwifi report   # the full audit
+
+sentinelwifi doctor       # check your environment (2 seconds)
+sudo sentinelwifi report  # the full audit of your network
 ```
 
 Or from a clone:
@@ -48,36 +60,35 @@ sudo python sentinel.py report
 ```
 
 No adapter handy, or just curious what the output looks like?
-
-```bash
-sentinelwifi demo                      # sample data, no network access
-sentinelwifi demo --html report.html   # same, as a standalone HTML file
-```
-
-The HTML version of the sample report is checked in at
-[docs/sample-report.html](docs/sample-report.html); a text version at
-[docs/sample-report.txt](docs/sample-report.txt).
+`python sentinel.py demo` renders a full report from synthetic data —
+that's exactly what the GIF above shows.
 
 ## What it checks
 
-- **Your connection** — SSID, BSSID, channel, signal, encryption type.
-  Open and WEP networks are flagged as what they are: no real protection.
-- **Router admin exposure** — whether the admin page answers on HTTP
+- 📶 **Your connection** — SSID, BSSID, channel, signal, and encryption
+  type. Open and WEP networks are flagged as what they are: no real
+  protection.
+- 🔐 **Router admin exposure** — whether the admin page answers on HTTP
   (your admin password crosses the LAN in cleartext) or HTTPS.
-- **Rogue DHCP** — parses your own DHCP lease files. If the server that
+- 🚨 **Rogue DHCP** — parses your own DHCP lease files. If the server that
   handed out your settings isn't your gateway, someone else may be
   redirecting your traffic.
-- **AP environment** — a 30-second passive sniff (monitor mode) or a
-  managed-mode scan lists nearby networks, with evil-twin detection
-  (your SSID from more than one MAC) and channel congestion with 2.4 GHz
-  overlap math.
-- **Devices on your LAN** — ARP scan of your /24 with vendor lookup.
+- 👥 **Evil twins** — if your SSID is broadcast by more than one access
+  point, you get a critical warning with the suspicious BSSIDs listed.
+- 📡 **Channel congestion** — how many networks share your channel, with
+  2.4 GHz overlap math (channels 1/6/11 are not the whole story).
+- 🖥️ **Devices on your LAN** — ARP scan of your /24 with vendor lookup.
   Devices are remembered between runs; anything new shows up marked
-  ★ NEW. `watch` sweeps every 60 seconds and alerts on joiners,
-  optionally via desktop notification.
-- **Exposed services** — a fast TCP connect-scan of a small curated port
-  list (Telnet, TR-069, VNC, RDP, SMB…) against your own devices, with
-  banner grabbing.
+  ★ NEW. `watch` re-sweeps every 60 s and alerts on joiners, optionally
+  with a desktop notification.
+- 🚪 **Exposed services** — a fast TCP connect-scan of a small curated
+  port list (Telnet, TR-069, VNC, RDP, SMB…) against your own devices,
+  with banner grabbing: *"what could an attacker who got onto my WiFi
+  touch first?"*
+
+## How it works
+
+![Scan pipeline](docs/how-it-works.svg)
 
 ## What it deliberately does not do
 
@@ -85,8 +96,12 @@ No packet injection, no deauthentication, no handshake capture, no
 password or WPS attacks, no association attempts, no scanning outside
 your subnet. CI enforces this: every push greps the package for offensive
 capability and fails the build if any appears. That's not a marketing
-line — it's a test, and you can see it in
-[ci.yml](.github/workflows/ci.yml).
+line — it's a test in [ci.yml](.github/workflows/ci.yml), and you can run
+it yourself:
+
+```bash
+grep -ri "deauth\|inject\|handshake\|crack" sentinelwifi/   # returns nothing
+```
 
 If a feature needs monitor mode and your adapter can't do it, the tool
 falls back to a managed-mode scan and says so in the report. It never
@@ -116,6 +131,12 @@ that appends only new devices to a file:
 ```cron
 */15 * * * * cd /opt/SentinelWiFi && python3 sentinel.py devices --csv --quiet >> /var/log/lan-devices.csv 2>/dev/null
 ```
+
+## Sample outputs
+
+- Full console report (text): [docs/sample-report.txt](docs/sample-report.txt)
+- Same report as a standalone HTML page: [docs/sample-report.html](docs/sample-report.html)
+- Static terminal screenshot: [docs/sample-report.svg](docs/sample-report.svg)
 
 ## Configuration
 
@@ -160,17 +181,44 @@ Bands: A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, F below that. Every rule lives in
 - If you installed scapy with `pip install --user`, run without `sudo`
   or install it system-wide — root's Python can't see user packages.
 
+## FAQ
+
+**Is it safe to run on public WiFi?**
+Yes — that's a design goal. It never injects frames, never attempts to
+join anything, and stores everything locally. It adds no attack surface
+of its own.
+
+**Why does the report say "no devices found" when I ran with sudo?**
+You probably installed scapy with `pip install --user`, which root's
+Python can't see. Either run without sudo, or `sudo pip install scapy`.
+`sentinelwifi doctor` will tell you exactly which case you're in.
+
+**My router has two WiFi names (2.4 GHz and 5 GHz) — why is it flagged
+as a possible evil twin?**
+Two BSSIDs with the same SSID is exactly what a dual-band router looks
+like. Add both BSSIDs to `trusted_bssids` in the config and the warning
+stops.
+
+**Does the "new device" alarm mean someone hacked me?**
+No — it means a device your machine hasn't seen before joined your
+network. A housemate's new phone triggers it too. That's the point: you
+decide whether you recognize it.
+
+**The grade dropped after I changed nothing — why?**
+New neighbors, a new device, or your router answering HTTP after a
+firmware update all change findings. Run it a few times to learn your
+network's normal baseline.
+
 ## Development
 
 ```bash
 python -m unittest discover -s tests   # 34 tests, no network required
 ```
 
-Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The
-two CI guards that keep the tool honest (no offensive capability, header
-on every file) are non-negotiable. Planned work is in
-[ROADMAP.md](ROADMAP.md); changes are logged in
-[CHANGELOG.md](CHANGELOG.md).
+Contributions welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The two CI
+guards that keep the tool honest (no offensive capability, header on every
+file) are non-negotiable. Planned work is in [ROADMAP.md](ROADMAP.md);
+changes are logged in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
