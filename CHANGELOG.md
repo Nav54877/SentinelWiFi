@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.2.0
+
+Unique-value detection pass, all passive:
+
+- WPS detection from beacons / `iw scan` (enabled WPS = brute-forceable
+  PIN regardless of password strength), scored −10.
+- PMF (802.11w) check from RSN capabilities — tells you whether deauth
+  attacks would work against your network without performing any.
+- WiFi generation detection (WiFi 4/5/6/7) from HT/VHT/HE beacon IEs.
+- Connection block shows WPS / deauth-safety / generation lines.
+- +2 scoring checks and parser tests (36 total).
+
 ## v2.1.0
 
 Professionalization pass:

@@ -141,3 +141,44 @@ BSS 11:22:33:44:55:66(on wlan0)
         cur = {"ssid": "RealNet", "bssid": "AA:AA:AA:AA:AA:01", "channel": 6}
         kinds = [r.kind for r in analyze_environment(aps, cur)]
         self.assertNotIn("evil_twin", kinds)
+
+
+class TestWpsPmfPhy(unittest.TestCase):
+    SAMPLE = """
+BSS aa:bb:cc:dd:ee:ff(on wlan0)
+	freq: 2437
+	capability: ESS Privacy (0x0011)
+	signal: -50.00 dBm
+	SSID: WpsNet
+	RSN:	 * Version: 1
+	 * Capability: 0x0000
+	WPS:	 * Version: 1.0
+	HT capabilities:
+BSS 11:22:33:44:55:66(on wlan0)
+	freq: 5180
+	capability: ESS Privacy (0x0011)
+	signal: -60.00 dBm
+	SSID: ModernNet
+	RSN:	 * Version: 1
+	 * Capability: 0x00c0
+	HE capabilities:
+"""
+    def test_parser_extracts_wps_pmf_phy(self):
+        from sentinelwifi.ap_scan import _parse_iw_scan
+        aps = {a.ssid: a for a in _parse_iw_scan(self.SAMPLE)}
+        self.assertTrue(aps["WpsNet"].wps)
+        self.assertEqual(aps["WpsNet"].pmf, "none")
+        self.assertEqual(aps["WpsNet"].phy, "WiFi 4")
+        self.assertFalse(aps["ModernNet"].wps)
+        self.assertEqual(aps["ModernNet"].pmf, "required")
+        self.assertEqual(aps["ModernNet"].phy, "WiFi 6")
+        self.assertEqual(aps["ModernNet"].band, "5")
+
+    def test_scoring(self):
+        from sentinelwifi.scoring import check_pmf, check_wps
+        self.assertEqual(check_wps(True).penalty, 10)
+        self.assertIsNone(check_wps(False))
+        self.assertEqual(check_pmf("none").penalty, 5)
+        self.assertEqual(check_pmf("capable").penalty, 0)
+        self.assertIsNone(check_pmf("required"))
+        self.assertIsNone(check_pmf(""))

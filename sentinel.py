@@ -34,9 +34,9 @@ from sentinelwifi.report import ReportData, report_to_console, report_to_json
 from sentinelwifi.report import write_html_report
 from sentinelwifi.scoring import (check_congestion, check_dhcp, check_evil_twin,
                                   check_exposed_services, check_http_admin,
-                                  check_new_aps, check_ssid_leak,
+                                  check_new_aps, check_pmf, check_ssid_leak,
                                   check_unknown_devices, check_wifi_encryption,
-                                  compute_grade)
+                                  check_wps, compute_grade)
 
 
 def _subnet24(local_ip: str) -> str:
@@ -101,7 +101,9 @@ def _build_findings(current, aps, rogue, devices, admin_proto, gateway,
     for f in (check_wifi_encryption(current.get("encryption", "")),
               check_http_admin(admin_proto, gateway),
               check_ssid_leak(current.get("ssid", "")),
-              check_dhcp(dhcp_info)):
+              check_dhcp(dhcp_info),
+              check_wps(current.get("wps", False)),
+              check_pmf(current.get("pmf", ""))):
         if f:
             findings.append(f)
     etwin = next((r for r in rogue if r.kind == "evil_twin"), None)
@@ -155,7 +157,9 @@ def cmd_scan(args, cfg) -> int:
     findings = []
     for f in (check_wifi_encryption(current.get("encryption", "")),
               check_http_admin(admin_proto, gateway),
-              check_ssid_leak(current.get("ssid", ""))):
+              check_ssid_leak(current.get("ssid", "")),
+              check_wps(current.get("wps", False)),
+              check_pmf(current.get("pmf", ""))):
         if f:
             findings.append(f)
     etwin = next((r for r in rogue if r.kind == "evil_twin"), None)
@@ -366,9 +370,11 @@ def _demo_data() -> ReportData:
     from sentinelwifi.scoring import Finding
 
     current = {"ssid": "dlink-Home-2.4", "bssid": "C4:AD:34:12:9B:F0",
-               "signal": -52, "channel": 6, "encryption": "WPA2", "band": "2.4"}
+               "signal": -52, "channel": 6, "encryption": "WPA2", "band": "2.4",
+               "wps": True, "pmf": "none", "phy": "WiFi 4"}
     aps = [
-        AccessPoint("dlink-Home-2.4", "C4:AD:34:12:9B:F0", 6, -52, "WPA2", "2.4"),
+        AccessPoint("dlink-Home-2.4", "C4:AD:34:12:9B:F0", 6, -52, "WPA2", "2.4",
+                    wps=True, pmf="none", phy="WiFi 4"),
         AccessPoint("dlink-Home-2.4", "F0:9F:C2:77:AA:01", 11, -71, "WPA2", "2.4"),
         AccessPoint("PrettyFlyForAWiFi", "8C:15:C7:3D:22:10", 6, -78, "WPA2", "2.4"),
         AccessPoint("xfinitywifi", "0A:11:22:33:44:55", 1, -83, "Open", "2.4"),
@@ -400,6 +406,8 @@ def _demo_data() -> ReportData:
               check_http_admin("http", "192.168.1.1"),
               check_ssid_leak(current["ssid"]),
               check_dhcp(dhcp),
+              check_wps(current.get("wps", False)),
+              check_pmf(current.get("pmf", "")),
               check_exposed_services(ports.risk_summary(services)),
               check_new_aps(hist.new_aps, current["ssid"])):
         if f:

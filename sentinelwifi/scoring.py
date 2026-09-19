@@ -251,3 +251,47 @@ def check_new_aps(new_aps: list, current_ssid: str) -> "Finding | None":
         fix="If one copies your network's name, verify the BSSID against your "
             "router's sticker before joining anything.",
         penalty=10 if near_yours else 3)
+
+
+def check_wps(wps_enabled: bool) -> "Finding | None":
+    """WPS (WiFi Protected Setup) is a known weak point: the PIN mechanism
+    can be brute-forced regardless of password strength."""
+    if not wps_enabled:
+        return None
+    return Finding(
+        id="wps-enabled", severity="warning", title="WPS is enabled",
+        explanation=("WiFi Protected Setup makes connecting easier, but its "
+                     "8-digit PIN can be brute-forced even if your WiFi "
+                     "password is strong — and then the password is revealed "
+                     "anyway."),
+        fix="Disable WPS in the router settings (look under WiFi Advanced). "
+            "Everything that uses WPS also works with the normal password.",
+        penalty=10)
+
+
+def check_pmf(pmf: str) -> "Finding | None":
+    """PMF (802.11w / management frame protection): without it, an attacker
+    on your network can kick devices off WiFi at will (deauth). Detected
+    from the RSN capabilities flag — no attack is ever performed."""
+    if pmf == "none":
+        return Finding(
+            id="pmf-none", severity="info",
+            title="Management frame protection is off",
+            explanation=("Your network does not protect management frames, so "
+                         "a device on your WiFi could force other devices to "
+                         "disconnect at will (a 'deauth attack'). It cannot "
+                         "steal passwords by itself, but it's a common first "
+                         "step for evil-twin tricks."),
+            fix="If your router supports 'PMF' or '802.11w', set it to "
+                "required or capable. Most modern WPA3-capable routers have it.",
+            penalty=5)
+    if pmf == "capable":
+        return Finding(
+            id="pmf-capable", severity="info",
+            title="Management frame protection is optional",
+            explanation=("Your router supports PMF (802.11w) but doesn't "
+                         "require it, so clients can still skip it."),
+            fix="Set PMF to 'required' in the router settings if all your "
+                "devices connect fine afterwards.",
+            penalty=0)
+    return None

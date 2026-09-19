@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sentinelwifi"
-version = "2.1.0"
+version = "2.2.0"
 description = "Passive, defensive auditor for your own home WiFi and LAN: grades your network security and tells you how to fix it"
 readme = "README.md"
 requires-python = ">=3.10"

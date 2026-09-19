@@ -77,6 +77,14 @@ that's exactly what the GIF above shows.
   point, you get a critical warning with the suspicious BSSIDs listed.
 - 📡 **Channel congestion** — how many networks share your channel, with
   2.4 GHz overlap math (channels 1/6/11 are not the whole story).
+- 🔓 **WPS detection** — if WiFi Protected Setup is enabled, your network
+  can be cracked via its PIN no matter how strong your password is.
+  Detected passively from beacons; the fix is a single router toggle.
+- 🛡️ **Deauth resistance check** — reads the PMF (802.11w) flag to tell you
+  whether forced-disconnect attacks would even work against your network.
+  No attack is ever performed; it's a capability flag in the beacon.
+- 📡 **WiFi generation** — WiFi 4 / 5 / 6 / 7 detected from the beacon,
+  so you know when your router is due for an upgrade.
 - 🖥️ **Devices on your LAN** — ARP scan of your /24 with vendor lookup.
   Devices are remembered between runs; anything new shows up marked
   ★ NEW. `watch` re-sweeps every 60 s and alerts on joiners, optionally
@@ -162,7 +170,8 @@ radio.
 The score starts at 100 and loses points per finding — Open/WEP WiFi
 (−45), rogue DHCP (−20), a possible evil twin (−20), unknown devices
 (−10/−25), HTTP admin page (−15), exposed risky services (−10), a
-brand-revealing SSID (−10), congestion (−5), WPA2 instead of WPA3 (−5).
+brand-revealing SSID (−10), WPS enabled (−10), PMF off (−5), congestion
+(−5), WPA2 instead of WPA3 (−5).
 Bands: A ≥ 90, B ≥ 75, C ≥ 60, D ≥ 40, F below that. Every rule lives in
 `scoring.py`, commented, in plain sight.
 

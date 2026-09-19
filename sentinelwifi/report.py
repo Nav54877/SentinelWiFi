@@ -93,6 +93,16 @@ def report_to_console(data: ReportData) -> str:
         sig = data.current.get("signal", 0)
         emit(f"    Signal      : {sig} dBm" if sig else "    Signal      : ?")
         emit(f"    Encryption  : {enc}{flag}")
+        if data.current.get("wps"):
+            emit("    WPS         : ENABLED  ⚠ brute-forceable PIN")
+        if data.current.get("pmf") == "none":
+            emit("    Deauth-safe : NO (PMF/802.11w off)")
+        elif data.current.get("pmf") == "capable":
+            emit("    Deauth-safe : partially (PMF optional)")
+        elif data.current.get("pmf") == "required":
+            emit("    Deauth-safe : YES (PMF required)")
+        if data.current.get("phy"):
+            emit(f"    Generation  : {data.current['phy']}")
     else:
         emit("    Not connected to a WiFi network (or Ethernet-only adapter).")
     emit(f"    Router admin: {data.admin_proto.upper()}"
@@ -114,8 +124,11 @@ def report_to_console(data: ReportData) -> str:
         for ap in sorted(data.aps, key=lambda a: a.signal, reverse=True)[:15]:
             enc = ap.encryption.upper()
             mark = " ⚠" if enc in ("OPEN", "WEP") else ""
+            if ap.wps:
+                mark += " [WPS]"
+            gen = f" {ap.phy}" if ap.phy else ""
             emit(f"      {ap.ssid[:28]:<28} ch {ap.channel or '?':<3} "
-                 f"{ap.signal or '?':>4} dBm  {enc}{mark}")
+                 f"{ap.signal or '?':>4} dBm  {enc}{gen}{mark}")
         if len(data.aps) > 15:
             emit(f"      … and {len(data.aps) - 15} more")
     else:

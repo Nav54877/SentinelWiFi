@@ -28,6 +28,9 @@ class AccessPoint:
     signal: int = 0          # dBm, negative
     encryption: str = "unknown"   # WPA3 / WPA2 / WEP / Open
     band: str = ""           # "2.4" / "5" / ""
+    wps: bool = False        # WiFi Protected Setup enabled (weak point)
+    pmf: str = ""            # "required" | "capable" | "none" | "" (802.11w)
+    phy: str = ""            # "WiFi 4" | "WiFi 5" | "WiFi 6" | "WiFi 7" | ""
 
 
 @dataclass
@@ -148,6 +151,9 @@ def get_current_connection(adapter: AdapterInfo) -> dict:
                     if not info["channel"] and ap.channel:
                         info["channel"] = ap.channel
                         info["band"] = ap.band
+                    info["wps"] = ap.wps
+                    info["pmf"] = ap.pmf
+                    info["phy"] = ap.phy
                     break
         except Exception:
             pass
@@ -176,7 +182,9 @@ def _parse_iw_scan(text: str) -> list[AccessPoint]:
                 aps.append(cur)
             # NB: "BSS Load:"/"BSS Color:" IE lines must NOT start a block
             cur = {"bssid": m.group(1), "ssid": "", "freq": 0, "signal": 0,
-                   "privacy": False, "rsn": False, "wpa": False, "sae": False}
+                   "privacy": False, "rsn": False, "wpa": False, "sae": False,
+                   "wps": False, "ht": False, "vht": False, "he": False,
+                   "eht": False, "rsncap": None}
         elif cur is None:
             continue
         elif s.startswith("SSID:"):
@@ -195,6 +203,25 @@ def _parse_iw_scan(text: str) -> list[AccessPoint]:
             cur["privacy"] = "Privacy" in s
         elif s.startswith("RSN:"):
             cur["rsn"] = True
+        elif s.startswith("WPS:"):
+            cur["wps"] = True
+        elif s.startswith("* Capability:"):
+            try:
+                cur["rsncap"] = int(s.split(":", 1)[1].strip(), 16)
+            except ValueError:
+                pass
+        elif s.startswith("EHT capabilities") or s.startswith("EHT operation") \
+                or s.startswith("EHT Operation"):
+            cur["eht"] = True
+        elif s.startswith("HE capabilities") or s.startswith("HE operation") \
+                or s.startswith("HE Operation"):
+            cur["he"] = True
+        elif s.startswith("VHT capabilities") or s.startswith("VHT operation") \
+                or s.startswith("VHT Operation"):
+            cur["vht"] = True
+        elif s.startswith("HT capabilities") or s.startswith("HT operation") \
+                or s.startswith("HT Operation"):
+            cur["ht"] = True
         elif s.startswith("WPA:"):
             cur["wpa"] = True
         elif "00-0f-ac-8" in s.lower() or "SAE" in s:
@@ -212,10 +239,25 @@ def _parse_iw_scan(text: str) -> list[AccessPoint]:
         else:
             enc = "Open"
         chan = _FREQ_TO_CHAN.get(c["freq"], 0)
+        if c["eht"]:
+            phy = "WiFi 7"
+        elif c["he"]:
+            phy = "WiFi 6"
+        elif c["vht"]:
+            phy = "WiFi 5"
+        elif c["ht"]:
+            phy = "WiFi 4"
+        else:
+            phy = ""
+        pmf = ""
+        if c["rsncap"] is not None:
+            pmf = ("required" if c["rsncap"] & 0x0040
+                   else "capable" if c["rsncap"] & 0x0080 else "none")
         out.append(AccessPoint(ssid=c["ssid"] or "(hidden)",
                                bssid=c["bssid"].upper(), channel=chan,
                                signal=c["signal"], encryption=enc,
-                               band=_band_for_channel(chan)))
+                               band=_band_for_channel(chan),
+                               wps=c["wps"], pmf=pmf, phy=phy))
     return out
 
 
@@ -271,6 +313,9 @@ def sniff_aps_monitor(ifname: str, seconds: int = SCAN_WINDOW_SECONDS) -> list[A
         ssid = ""
         channel = 0
         encryption = "Open"
+        wps = False
+        rsncap = None
+        phy_bits = {"ht": False, "vht": False, "he": False}
         if pkt.haslayer(Dot11Elt):
             elt = pkt.getlayer(Dot11Elt)
             while elt:
@@ -289,6 +334,16 @@ def sniff_aps_monitor(ifname: str, seconds: int = SCAN_WINDOW_SECONDS) -> list[A
                 elif elt.ID == 221 and elt.info.startswith(b"\x00\x50\xf2\x02"):
                     if encryption == "Open":
                         encryption = "WEP"
+                elif elt.ID == 221 and elt.info.startswith(b"\x00\x50\xf2\x04"):
+                    wps = True  # WiFi Protected Setup IE
+                elif elt.ID == 45:      # HT capabilities -> WiFi 4
+                    phy_bits["ht"] = True
+                elif elt.ID == 192:     # VHT capabilities -> WiFi 5
+                    phy_bits["vht"] = True
+                elif elt.ID == 255 and elt.info[:1] == b"#":  # ext 35 HE -> WiFi 6
+                    phy_bits["he"] = True
+                elif elt.ID == 48:
+                    rsncap = int.from_bytes(bytes(elt.info)[-2:], "little")
                 elt = elt.payload.getlayer(Dot11Elt) if elt.payload.haslayer(Dot11Elt) else None
         # Privacy bit in capability field => at least WEP-era encryption
         cap = pkt[Dot11Beacon].cap
@@ -297,6 +352,12 @@ def sniff_aps_monitor(ifname: str, seconds: int = SCAN_WINDOW_SECONDS) -> list[A
         if (cap & 0x0010) and encryption == "Open":
             encryption = "WEP"  # privacy bit set but no WPA/RSN IEs
         signal = int(pkt.dBm_AntNoise) if hasattr(pkt, "dBm_AntNoise") else 0
+        pmf = ""
+        if rsncap is not None:
+            pmf = ("required" if rsncap & 0x0040
+                   else "capable" if rsncap & 0x0080 else "none")
+        phy = ("WiFi 6" if phy_bits["he"] else "WiFi 5" if phy_bits["vht"]
+               else "WiFi 4" if phy_bits["ht"] else "")
         aps[bssid] = AccessPoint(
             ssid=ssid or "(hidden)",
             bssid=bssid,
@@ -304,6 +365,7 @@ def sniff_aps_monitor(ifname: str, seconds: int = SCAN_WINDOW_SECONDS) -> list[A
             signal=signal,
             encryption=encryption,
             band=_band_for_channel(channel),
+            wps=wps, pmf=pmf, phy=phy,
         )
 
     sniff(iface=ifname, timeout=seconds, prn=_handle, store=False)
