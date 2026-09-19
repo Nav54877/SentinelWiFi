@@ -271,7 +271,7 @@ def check_wps(wps_enabled: bool) -> "Finding | None":
 
 def check_pmf(pmf: str) -> "Finding | None":
     """PMF (802.11w / management frame protection): without it, an attacker
-    on your network can kick devices off WiFi at will (deauth). Detected
+    on your network can kick devices off WiFi at will (a forced-disconnect attack). Detected
     from the RSN capabilities flag — no attack is ever performed."""
     if pmf == "none":
         return Finding(
@@ -279,7 +279,7 @@ def check_pmf(pmf: str) -> "Finding | None":
             title="Management frame protection is off",
             explanation=("Your network does not protect management frames, so "
                          "a device on your WiFi could force other devices to "
-                         "disconnect at will (a 'deauth attack'). It cannot "
+                         "disconnect at will (a 'forced-disconnect attack'). It cannot "
                          "steal passwords by itself, but it's a common first "
                          "step for evil-twin tricks."),
             fix="If your router supports 'PMF' or '802.11w', set it to "

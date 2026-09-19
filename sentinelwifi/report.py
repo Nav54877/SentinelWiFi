@@ -96,11 +96,11 @@ def report_to_console(data: ReportData) -> str:
         if data.current.get("wps"):
             emit("    WPS         : ENABLED  ⚠ brute-forceable PIN")
         if data.current.get("pmf") == "none":
-            emit("    Deauth-safe : NO (PMF/802.11w off)")
+            emit("    Mgmt-frame protection: OFF (PMF/802.11w)")
         elif data.current.get("pmf") == "capable":
-            emit("    Deauth-safe : partially (PMF optional)")
+            emit("    Mgmt-frame protection: optional (PMF)")
         elif data.current.get("pmf") == "required":
-            emit("    Deauth-safe : YES (PMF required)")
+            emit("    Mgmt-frame protection: ON (PMF required)")
         if data.current.get("phy"):
             emit(f"    Generation  : {data.current['phy']}")
     else:
