@@ -6,7 +6,7 @@
 </p>
 
 <p align="center">
-  <img src="https://github.com/Nav54877/SentinelWiFi/actions/workflows/ci.yml/badge.svg" alt="CI">
+  <img src="https://github.com/navairgap/SentinelWiFi/actions/workflows/ci.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT">
   <img src="https://img.shields.io/badge/python-3.10%2B-blue.svg" alt="Python 3.10+">
   <img src="https://img.shields.io/badge/offense-none-green.svg" alt="Passive only">
@@ -43,7 +43,7 @@ try it, run `sentinelwifi doctor` and file an issue with the output.
 ## Quick start
 
 ```bash
-pipx install git+https://github.com/Nav54877/SentinelWiFi.git
+pipx install git+https://github.com/navairgap/SentinelWiFi.git
 
 sentinelwifi doctor       # check your environment (2 seconds)
 sudo sentinelwifi report  # the full audit of your network
@@ -52,7 +52,7 @@ sudo sentinelwifi report  # the full audit of your network
 Or from a clone:
 
 ```bash
-git clone https://github.com/Nav54877/SentinelWiFi.git
+git clone https://github.com/navairgap/SentinelWiFi.git
 cd SentinelWiFi
 pip install -r requirements.txt
 python sentinel.py selftest
